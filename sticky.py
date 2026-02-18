@@ -5,6 +5,10 @@ import threading
 import keyboard
 from pynput import mouse
 
+# Allow running when PC is locked (mouse may report corner position).
+# Kill hotkey ctrl+space+l still stops the script.
+pyautogui.FAILSAFE = False
+
 # ==============================
 # GLOBAL STATE VARIABLES
 # ==============================
@@ -12,7 +16,7 @@ from pynput import mouse
 running = True          # Controls full process (for kill hotkey)
 bot_active = True       # Controls whether automation is currently active
 last_user_activity = time.time()   # Timestamp of last mouse/keyboard activity
-INACTIVITY_TIMEOUT = 10  # Seconds before bot resumes after user inactivity
+INACTIVITY_TIMEOUT = 1  # Seconds before bot resumes after user inactivity
 
 
 # ==============================
