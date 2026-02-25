@@ -5,6 +5,13 @@ import threading
 import keyboard
 from pynput import mouse
 
+try:
+    # Optional dependency for desktop notifications.
+    # Install with: pip install plyer
+    from plyer import notification as _notification
+except Exception:
+    _notification = None
+
 # Allow running when PC is locked (mouse may report corner position).
 # Kill hotkey ctrl+space+l still stops the script.
 pyautogui.FAILSAFE = False
@@ -16,7 +23,32 @@ pyautogui.FAILSAFE = False
 running = True          # Controls full process (for kill hotkey)
 bot_active = True       # Controls whether automation is currently active
 last_user_activity = time.time()   # Timestamp of last mouse/keyboard activity
-INACTIVITY_TIMEOUT = 1  # Seconds before bot resumes after user inactivity
+INACTIVITY_TIMEOUT = 15  # Seconds before bot resumes after user inactivity
+
+
+# ==============================
+# NOTIFICATION HELPER
+# ==============================
+
+def show_notification(title: str, message: str, timeout: int = 5) -> None:
+    """
+    Show a desktop notification if supported, otherwise
+    fall back to console output.
+    """
+    if _notification is not None:
+        try:
+            _notification.notify(
+                title=title,
+                message=message,
+                app_name="Sticky Bot",
+                timeout=timeout,
+            )
+            return
+        except Exception:
+            # Fall through to console print on any failure.
+            pass
+
+    print(f"[NOTIFY] {title}: {message}")
 
 
 # ==============================
@@ -31,6 +63,7 @@ def kill_process():
     global running
     print("Kill hotkey pressed. Exiting process...")
     running = False
+    show_notification("Terminated", "Automation stopped.")
 
 
 keyboard.add_hotkey('ctrl+space+l', kill_process)
@@ -111,6 +144,7 @@ if __name__ == '__main__':
 
     # Small startup delay
     time.sleep(2 + random.random() * 1.3)
+    show_notification("Terminated", "Automation started.")
 
     while running:
 
