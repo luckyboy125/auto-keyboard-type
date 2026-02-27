@@ -1,14 +1,14 @@
-import pyautogui
+import pyautogui  # type: ignore
 import random
 import time
 import threading
-import keyboard
-from pynput import mouse
+import keyboard # type: ignore
+from pynput import mouse # type: ignore
 
 try:
     # Optional dependency for desktop notifications.
     # Install with: pip install plyer
-    from plyer import notification as _notification
+    from plyer import notification as _notification # type: ignore
 except Exception:
     _notification = None
 
@@ -88,8 +88,15 @@ def on_user_activity(event=None):
 # Detect keyboard activity
 keyboard.on_press(on_user_activity)
 
-# Detect mouse movement
-mouse_listener = mouse.Listener(on_move=lambda x, y: on_user_activity())
+# Detect mouse movement and scrolling
+def on_scroll(x, y, dx, dy):
+    on_user_activity()
+
+
+mouse_listener = mouse.Listener(
+    on_move=lambda x, y: on_user_activity(),
+    on_scroll=on_scroll,
+)
 mouse_listener.start()
 
 

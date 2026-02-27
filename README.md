@@ -1,151 +1,157 @@
-# 🖱️ Activity Automation Bot
+# Activity Automation Bot (`sticky.py`)
 
-A lightweight Python automation tool that simulates random keyboard and
-mouse activity.\
-Includes smart pause/resume logic based on real user interaction and a
-global kill hotkey.
+A lightweight Python script that simulates random keyboard and mouse activity.
+It includes smart pause/resume based on real user input, desktop notifications,
+and a global kill hotkey.
 
-------------------------------------------------------------------------
+---
 
-## 🚀 Features
+## Features
 
-### ✅ Random Activity Simulation
+- **Random activity simulation**
+  - `Alt + Tab` window switching
+  - `Ctrl + Tab` tab switching
+  - `PageUp` / `PageDown`
+  - `Up` / `Down` arrow scrolling
+  - Smooth random mouse movement across the screen
+- **Human‑like timing**
+  - Randomized actions and delays to avoid repetitive patterns
+- **Smart auto‑pause on user activity**
+  - Pauses as soon as it detects:
+    - Mouse movement
+    - Any keyboard key press
+  - Console message: `User activity detected -> Bot paused.`
+- **Auto‑resume after inactivity**
+  - If there is **no user activity for 15 seconds** (`INACTIVITY_TIMEOUT`),
+    the bot resumes automatically.
+  - Console message: `No user activity detected. Resuming bot...`
+- **Global kill hotkey**
+  - Press **`Ctrl + Space + L`** to terminate the script cleanly.
+  - Console message: `Kill hotkey pressed. Exiting process...`
+- **Desktop notifications**
+  - Shows notification when:
+    - Automation starts
+    - Automation stops (including via kill hotkey)
+  - Uses `plyer` when available, otherwise falls back to console output.
 
-The bot performs random actions such as: - ALT + TAB switching - CTRL +
-TAB switching - Page Up / Page Down - Arrow key scrolling - Random mouse
-movement across the screen
+---
 
-All actions use randomized timing and behavior to avoid repetitive
-patterns.
+## Requirements
 
-------------------------------------------------------------------------
+- **OS**: Windows
+- **Python**: 3.10+ recommended
+- **Packages**:
 
-### ✅ Smart Auto-Pause on User Activity
+```bash
+pip install pyautogui keyboard pynput plyer
+```
 
-If the user: - Moves the mouse\
-- Presses any keyboard key
+> For the global hotkey and keyboard hooks (`keyboard` module), running the
+> terminal **as Administrator** is often required on Windows.
 
-The bot immediately pauses.
+---
 
-Console message: User activity detected -\> Bot paused.
+## How It Works
 
-------------------------------------------------------------------------
+- **Global state**
+  - `running`: controls the main loop and is set to `False` by the kill hotkey.
+  - `bot_active`: indicates whether automation is currently allowed to run.
+  - `last_user_activity`: timestamp of last mouse/keyboard event.
+  - `INACTIVITY_TIMEOUT`: seconds since last activity before auto‑resume
+    (default: `15`).
 
-### ✅ Auto-Resume After Inactivity
+- **Notifications**
+  - `show_notification(title, message, timeout=5)`:
+    - Uses `plyer.notification.notify(...)` if available.
+    - Otherwise prints a `[NOTIFY]` line to the console.
+  - Called when:
+    - The bot starts (`"Automation started."`)
+    - The bot stops (`"Automation stopped."`)
 
-If there is **no user activity for 10 seconds**, the bot automatically
-resumes.
+- **User activity detection**
+  - `keyboard.on_press(on_user_activity)` listens for any key press.
+  - `pynput.mouse.Listener(on_move=...)` listens for mouse movement.
+  - Any activity:
+    - Updates `last_user_activity`.
+    - Sets `bot_active = False` (pauses bot).
 
-Console message: No user activity detected. Resuming bot...
+- **Inactivity watcher**
+  - A daemon thread runs `inactivity_watcher()`:
+    - Every second it checks if `bot_active` is `False` and
+      `time.time() - last_user_activity > INACTIVITY_TIMEOUT`.
+    - If so, it prints `No user activity detected. Resuming bot...` and
+      sets `bot_active = True`.
 
-The inactivity timeout is configurable:
+- **Random actions**
+  - In the main loop, while `running` is `True` and `bot_active` is `True`,
+    it chooses a random action:
+    - `Alt + Tab` / `Ctrl + Tab` with random number of presses
+    - `PageUp` / `PageDown`
+    - Multiple `Up` or `Down` key presses with short delays
+    - Smooth random mouse move using `pyautogui.moveTo` with easing
+  - Between actions it sleeps for a random interval
+    (currently between ~1.3 and 2.6 seconds).
 
-INACTIVITY_TIMEOUT = 10
+- **Kill hotkey**
+  - `keyboard.add_hotkey('ctrl+space+l', kill_process)`:
+    - Sets `running = False`
+    - Prints a message
+    - Triggers the “Automation stopped” notification
 
-------------------------------------------------------------------------
+---
 
-### ✅ Global Kill Hotkey
+## Usage
 
-Press:
+From a terminal in the project directory:
 
-CTRL + SPACE + L
+```bash
+cd D:\workplace\smart-contract\python-pra
+python sticky.py
+```
 
-This will completely terminate the process.
+- Let it run in the background.
+- Use your PC normally. The bot:
+  - Pauses while you are active.
+  - Resumes a short time after you stop.
+- To stop it, press **`Ctrl + Space + L`**.
 
-Console message: Kill hotkey pressed. Exiting process... Process
-terminated cleanly.
+If `keyboard` fails to initialize (e.g. due to permissions), you may need to:
 
-------------------------------------------------------------------------
+- Run PowerShell / CMD as **Administrator**, or
+- Adjust the code to catch exceptions around `keyboard.add_hotkey` and
+  `keyboard.on_press` and run without global hotkeys.
 
-## 📦 Requirements
+---
 
-Install dependencies before running:
+## Building as an EXE (optional)
 
-pip install pyautogui keyboard pynput
+You can bundle the script into a standalone Windows executable using PyInstaller.
 
-------------------------------------------------------------------------
-
-## 🛠 Build as EXE
-
-Install PyInstaller:
-
+```bash
 pip install pyinstaller
+pyinstaller --onefile --noconsole sticky.py
+```
 
-Build:
+- `--onefile`: produces a single `.exe` file.
+- `--noconsole`: hides the console window (runs in background).
 
-pyinstaller --onefile --noconsole your_script.py
+The resulting file will be in the `dist/` directory:
 
-Options Explained: - --onefile → Single executable file - --noconsole →
-Runs silently in background
+- `dist/sticky.exe`
 
-The final executable will be located in:
+---
 
-dist/your_script.exe
+## Notes, Use Cases, and Disclaimer
 
-------------------------------------------------------------------------
+- **Typical use cases**
+  - Prevent system idle timeout or screen lock
+  - Keep remote desktop / VPN sessions active
+  - Simulate light, non‑intrusive user activity
 
-## ⚠️ Important Notes
+- **Antivirus**
+  - Because it uses keyboard and mouse hooks, some antivirus tools may flag or
+    sandbox it. This is common for automation utilities.
 
-### Antivirus Warning
-
-Since the application hooks keyboard input and monitors mouse movement,
-some antivirus software may flag it as suspicious. This is common
-behavior for automation tools.
-
-------------------------------------------------------------------------
-
-### Administrator Privileges
-
-For global hotkeys to work reliably on Windows, you may need to run the
-executable as Administrator.
-
-------------------------------------------------------------------------
-
-## 🧠 How It Works
-
-### Background Watcher Thread
-
-A daemon thread constantly checks: Current Time - Last User Activity
-Time
-
-If greater than inactivity timeout → bot resumes.
-
-------------------------------------------------------------------------
-
-### Activity Detection Hooks
-
--   keyboard.on_press() → Detects keyboard input\
--   pynput.mouse.Listener() → Detects mouse movement
-
-These update the last_user_activity timestamp and pause automation.
-
-------------------------------------------------------------------------
-
-### Random Mouse Movement
-
-The bot: - Detects screen resolution - Moves to a random (x, y)
-coordinate - Uses smooth easing animation
-
-------------------------------------------------------------------------
-
-## 🔧 Customization
-
-You can modify: - INACTIVITY_TIMEOUT - Mouse movement duration - Action
-delay timing - Kill hotkey combination
-
-------------------------------------------------------------------------
-
-## 📌 Use Cases
-
--   Prevent system idle timeout\
--   Prevent screen lock\
--   Keep remote sessions active\
--   Simulate light activity
-
-------------------------------------------------------------------------
-
-## 🔒 Disclaimer
-
-This software is intended for legitimate automation purposes only.\
-Ensure compliance with company policies and local regulations before
-use.
+- **Disclaimer**
+  - This script is intended for **legitimate** automation only.
+  - Always comply with your organization’s policies and local regulations.
