@@ -129,7 +129,7 @@ You can bundle the script into a standalone Windows executable using PyInstaller
 
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --noconsole sticky.py
+pyinstaller --onefile --noconsole --hidden-import=plyer.platforms.win.notification sticky.py
 ```
 
 - `--onefile`: produces a single `.exe` file.
